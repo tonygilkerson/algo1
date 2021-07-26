@@ -1,2 +1,3 @@
 # algo1
-Playground for algorithms 
+
+Playground for algorithms
