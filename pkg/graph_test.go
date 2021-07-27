@@ -23,10 +23,17 @@ func Test2(t *testing.T) {
 
 	graph := pkg.NewGraph("My Graph")
 
-	for i := 0; i < 10; i++ {
+	// Add a few nodes
+	graph.AddNode("first")
+
+	for i := 0; i < 9; i++ {
 		id := "node-" + strconv.Itoa(i)
-		graph.AddNode(id)
+		graph.ConnectNewNode("first", id, "edge")
 	}
+
+	graph.ConnectNewNode("a", "b", "edge a-b")
+	graph.ConnectNewNode("b", "c", "edge b-c")
+	graph.ConnectNewNode("c", "d", "edge c-d")
 
 	want := 10
 	got := len(graph.Nodes)
@@ -41,14 +48,11 @@ func Test3(t *testing.T) {
 
 	// Add a few nodes
 	graph.AddNode("a")
-	graph.AddNode("b")
-	graph.AddNode("c")
-	graph.AddNode("d")
 
-	// Add edges so that a -> b -> c -> d
-	graph.AddEdge("edge a-b", "a", "b")
-	graph.AddEdge("edge b-c", "b", "c")
-	graph.AddEdge("edge c-d", "c", "d")
+	// Add edges so that a <--> b <--> c <--> d
+	graph.ConnectNewNode("a", "b", "edge a-b")
+	graph.ConnectNewNode("b", "c", "edge b-c")
+	graph.ConnectNewNode("c", "d", "edge c-d")
 
 	// Start at a, traverse graph and make sure you end up at d
 	// This is a simplified case where each node has at most 2 edge
@@ -61,12 +65,7 @@ func Test3(t *testing.T) {
 	nodeC := nodeB.Edges[1].TargetOf["b"] // 0 - goes back, 1 - goes forward
 	nodeD := nodeC.Edges[1].TargetOf["c"]
 
-	
 	// Walk it back
-	// nodeC = nodeD.Edges[0].PointsTo // D only has one edge
-	// nodeB = nodeC.Edges[0].PointsTo // 0 - goes back, 1 - goes forward
-	// nodeA = nodeB.Edges[0].PointsTo
-
 	nodeC = nodeD.Edges[0].TargetOf["d"] // D only has one edge
 	nodeB = nodeC.Edges[0].TargetOf["c"] // 0 - goes back, 1 - goes forward
 	nodeA = nodeB.Edges[0].TargetOf["b"]
@@ -86,21 +85,59 @@ func Test4(t *testing.T) {
 
 	// Add a few nodes
 	graph.AddNode("a")
-	graph.AddNode("b")
-	graph.AddNode("c")
-	graph.AddNode("d")
 
-	// Add edges so that a -> b -> c -> d
-	graph.AddEdge("edge a-b", "a", "b")
-	graph.AddEdge("edge b-c", "b", "c")
-	graph.AddEdge("edge c-d", "c", "d")
-
-	graph.AddEdge("edge c-a", "c", "a")
+	// Add edges so that a <--> b <--> c <--> d
+	graph.ConnectNewNode("a", "b", "edge a-b")
+	graph.ConnectNewNode("b", "c", "edge b-c")
+	graph.ConnectNewNode("c", "d", "edge c-d")
 
 	startNode := graph.GetNode("a")
 	path := new([]*pkg.Node)
 
 	graph.Walk(startNode, path)
 
+}
 
+func Test5(t *testing.T) {
+	graph := pkg.NewGraph("My Graph")
+
+	// Add a few nodes
+	graph.AddNode("a")
+
+	// Add edges so that a <--> b <--> c <--> d
+	graph.ConnectNewNode("a", "b", "edge a-b")
+	graph.ConnectNewNode("b", "c", "edge b-c")
+	graph.ConnectNewNode("c", "d", "edge c-d")
+
+	want := true
+	got := graph.IsEulerian()
+
+	if want != got {
+		t.Errorf("Check if graph is Eulerian, want %t, got %t\n", want, got)
+	}
+}
+
+func Test6(t *testing.T) {
+	graph := pkg.NewGraph("The Seven Bridges of Königsberg")
+
+	// Add a few nodes
+	graph.AddNode("a")
+
+	// Add edges so that it is the The Seven Bridges of Königsberg
+	graph.ConnectNewNode("a", "b", "edge1 a-b")
+	graph.AddEdge("a", "b", "edge2 a-b")
+
+	graph.ConnectNewNode("b", "c", "edge3 b-c")
+	graph.AddEdge("b", "c", "edge4 b-c")
+
+	graph.ConnectNewNode("b", "d", "edge5 b-d")
+	graph.AddEdge("a", "d", "edge6 a-d")
+	graph.AddEdge("c", "d", "edge7 c-d")
+
+	want := false
+	got := graph.IsEulerian()
+
+	if want != got {
+		t.Errorf("Check The Seven Bridges of Königsberg is not Eulerian, want %t, got %t\n", want, got)
+	}
 }

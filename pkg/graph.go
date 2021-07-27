@@ -1,6 +1,9 @@
 package pkg
 
-import "fmt"
+import (
+	"errors"
+	"fmt"
+)
 
 type Graph struct {
 	Name  string
@@ -13,8 +16,8 @@ type Node struct {
 }
 
 type Edge struct {
-	ID    string
-	Taken bool
+	ID       string
+	Taken    bool
 	TargetOf map[string]*Node
 }
 
@@ -30,28 +33,73 @@ func NewGraph(name string) *Graph {
 }
 
 //
-// AddNode - Add a node to the graph
+// AddNode - Add a node to the graph.
+//           Can only add the first node, afte that you must
+//           connect to an existing node
 //
-func (graph *Graph) AddNode(ID string) {
+func (graph *Graph) AddNode(ID string) error {
+
+	if len(graph.Nodes) > 0 {
+		return errors.New("can not add a node if the graph has existing nodes. Try connecting to an existing node")
+	}
+
 	node := newNode(ID)
 	graph.Nodes[ID] = node
+	return nil
 }
 
 //
-// AddEdge - Add an edge to the graph
+// ConnectNewNode - Connect a new node to an existing node in the graph
 //
-func (graph *Graph) AddEdge(edgeID string, leftNodeID string, rightNodeID string) {
+func (graph *Graph) ConnectNewNode(existingNodeID, newNodeID, edgeID string) error {
 
-	// get from and to nodes from graph
-	leftNode := graph.Nodes[leftNodeID]
-	rightNode := graph.Nodes[rightNodeID]
+	// find existing node
+	existingNode, ok := graph.Nodes[existingNodeID]
+	if !ok {
+		return errors.New("node not found for existingNodeID")
+	}
 
-	// create edge such that left -> right and right -> left
-	edge := newEdge(edgeID, leftNode, rightNode)
+	// create new node
+	newNode := newNode(newNodeID)
+	graph.Nodes[newNodeID] = newNode
 
-	leftNode.Edges = append(leftNode.Edges, edge)
-	rightNode.Edges = append(rightNode.Edges, edge)
+	// create edge such that existing -> new and new -> existing
+	edge := newEdge(edgeID, existingNode, newNode)
+
+	existingNode.Edges = append(existingNode.Edges, edge)
+	newNode.Edges = append(newNode.Edges, edge)
+
+	return nil
 }
+
+//
+// AddEdge - Add an edge to two existing nodes
+//
+func (graph *Graph) AddEdge(xNodeID, yNodeID, edgeID string) error {
+
+	// find existing nodes
+	xNode, ok := graph.Nodes[xNodeID]
+	if !ok {
+		return errors.New("xNodeID not found")
+	}
+
+	yNode, ok := graph.Nodes[yNodeID]
+	if !ok {
+		return errors.New("yNodeID not found")
+	}
+
+
+	// create edge such that existing -> new and new -> existing
+	edge := newEdge(edgeID, xNode, yNode)
+
+	xNode.Edges = append(xNode.Edges, edge)
+	yNode.Edges = append(yNode.Edges, edge)
+
+	return nil
+}
+
+//
+// 
 
 //
 // GetNode - Get node by ID
@@ -61,9 +109,47 @@ func (graph *Graph) GetNode(nodeID string) *Node {
 }
 
 //
+// GetDegree
+//
+func (graph *Graph) GetGegree(node *Node) int {
+
+	return len(node.Edges)
+
+}
+
+//
+// IsEulerian - Check to see if the graph is Eulerian, or partly Eulerian
+//              i.e. all nodes have even number of edges
+//
+func (graph *Graph) IsEulerian() bool {
+
+	if len(graph.Nodes) < 2 {
+		// must have at least two nodes
+		return false
+	}
+
+	var oddCount int = 0
+	for _, node := range graph.Nodes {
+
+		if len(node.Edges)%2 != 0 {
+			oddCount++
+		}
+	}
+
+	// all nodes must have even degree
+	// or exactly two nodes have an odd degree
+	if oddCount == 0 || oddCount == 2 {
+		return true
+	} else {
+		return false
+	}
+}
+
+//
 // newNode - The Node constructor
 //
 func newNode(ID string) *Node {
+
 	node := new(Node)
 	node.ID = ID
 	node.Edges = make([]*Edge, 0)
